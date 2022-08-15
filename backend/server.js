@@ -1,11 +1,16 @@
 const express = require('express');
 require('dotenv').config();
+const connectDB = require('./config/db');
 
 const { chats } = require('./data/data');
 
 const PORT = process.env.PORT || 5000;
 const app = express();
 
+// DB connection
+connectDB();
+
+// Test Routes
 app.get('/', (req, res) => {
   res.send('API is running successfully!');
 });
