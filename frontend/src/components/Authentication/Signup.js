@@ -42,7 +42,10 @@ const Signup = () => {
       }
       if (pic.type === 'image/jpeg' || pic.type == 'image/png') {
         // Uploading Image to firebase storage
-        const storageRef = ref(storage, `talk-a-tive/pics/${pic.name}`);
+        const storageRef = ref(
+          storage,
+          `${process.env.REACT_APP_FIREBASE_STORAGE_FOLDER_URL}${pic.name}`
+        );
         const uploadTask = uploadBytesResumable(storageRef, pic, {
           contentType: pic.type,
         });
