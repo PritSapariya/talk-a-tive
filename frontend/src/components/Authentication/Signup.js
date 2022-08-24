@@ -1,13 +1,17 @@
 import {
   Button,
   FormControl,
+  FormHelperText,
   FormLabel,
   Input,
   InputGroup,
   InputRightElement,
+  useToast,
   VStack,
 } from '@chakra-ui/react';
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { useState } from 'react';
+import { storage } from '../../config/firebaseConfig';
 
 const Signup = () => {
   const [show, setShow] = useState(false);
@@ -18,20 +22,67 @@ const Signup = () => {
   const [confirmpassword, setConfirmpassword] = useState();
   const [password, setPassword] = useState();
   const [pic, setPic] = useState();
+  const [progress, setProgress] = useState(0);
 
-  const postDetails = () => {};
+  const toast = useToast();
+
+  const imageErrorToast = (title = 'Please select an Image!') =>
+    toast({
+      title: title,
+      status: 'warning',
+      position: 'bottom',
+      isClosable: true,
+      duration: 5000,
+    });
+
+  const postDetails = (pic) => {
+    try {
+      if (pic === undefined) {
+        imageErrorToast();
+      }
+      if (pic.type === 'image/jpeg' || pic.type == 'image/png') {
+        // Uploading Image to firebase storage
+        const storageRef = ref(storage, `talk-a-tive/pics/${pic.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, pic, {
+          contentType: pic.type,
+        });
+        uploadTask.on(
+          'state_changed',
+          (snapshot) => {
+            const prog =
+              (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setProgress(prog);
+          },
+          (err) => console.error(err),
+          () => {
+            getDownloadURL(uploadTask.snapshot.ref).then((url) =>
+              // store this file URL
+              console.log(url)
+            );
+          }
+        );
+      } else {
+        imageErrorToast();
+        return;
+      }
+    } catch (error) {
+      imageErrorToast('Network Error');
+    } finally {
+      return;
+    }
+  };
   const submitHandler = () => {};
 
   return (
     <VStack spacing="5px">
-      <FormControl id="first-name" isRequired>
+      <FormControl id="firstName" isRequired>
         <FormLabel>Name</FormLabel>
         <Input
           placeholder="Enter Your Name"
           onChange={(e) => setName(e.target.value)}
         />
       </FormControl>
-      <FormControl id="email" isRequired>
+      <FormControl id="email-signup" isRequired>
         <FormLabel>Email Address</FormLabel>
         <Input
           type="email"
@@ -39,7 +90,7 @@ const Signup = () => {
           onChange={(e) => setEmail(e.target.value)}
         />
       </FormControl>
-      <FormControl id="password" isRequired>
+      <FormControl id="password-signup" isRequired>
         <FormLabel>Password</FormLabel>
         <InputGroup size="md">
           <Input
@@ -54,7 +105,7 @@ const Signup = () => {
           </InputRightElement>
         </InputGroup>
       </FormControl>
-      <FormControl id="password" isRequired>
+      <FormControl id="confirmPassword" isRequired>
         <FormLabel>Confirm Password</FormLabel>
         <InputGroup size="md">
           <Input
@@ -77,6 +128,9 @@ const Signup = () => {
           accept="image/*"
           onChange={(e) => postDetails(e.target.files[0])}
         />
+        {progress > 0 && (
+          <FormHelperText>Uploaded... {progress}%</FormHelperText>
+        )}
       </FormControl>
       <Button
         colorScheme="blue"
