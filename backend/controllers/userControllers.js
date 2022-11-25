@@ -35,20 +35,25 @@ const registerUser = async (req, res, next) => {
   }
 };
 
-const authUser = async (req, res) => {
+const authUser = async (req, res, next) => {
   const { email, password } = req.body;
 
   try {
     const user = await User.findOne({ email });
-
-    if (user && (await user.matchPassword(password))) {
-      res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        pic: user.pic,
-        token: generateToken(user._id),
-      });
+    if (user) {
+      if (await user.matchPassword(password)) {
+        res.json({
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          pic: user.pic,
+          token: generateToken(user._id),
+        });
+      } else {
+        return next(CustomErrorHandler.wrongCredentials());
+      }
+    } else {
+      return next(CustomErrorHandler.notFound('User does not exists.'));
     }
   } catch (error) {
     return next(error);

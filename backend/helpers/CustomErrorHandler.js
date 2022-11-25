@@ -9,7 +9,7 @@ class CustomErrorHandler extends Error {
     return new CustomErrorHandler(409, message);
   }
 
-  static wrongCredentials(message = 'Username or password is wrong!') {
+  static wrongCredentials(message = 'Username or Password is wrong!') {
     return new CustomErrorHandler(401, message);
   }
 
