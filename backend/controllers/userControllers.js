@@ -1,57 +1,63 @@
-const asyncHandler = require('express-async-handler');
-const generateToken = require('../config/generateToken');
+const CustomErrorHandler = require('../helpers/CustomErrorHandler');
 const User = require('../models/userModel');
+const { generateToken } = require('../services/jwt-service');
 
-const registerUser = asyncHandler(async (req, res) => {
+const registerUser = async (req, res, next) => {
   const { name, email, password, pic } = req.body;
 
-  if (!name || !email || !password) {
-    res.status(400);
-    throw new Error('Please Enter all the Fields');
-  }
+  try {
+    const userExists = await User.findOne({ email });
 
-  const userExists = await User.findOne({ email });
+    if (userExists) {
+      return next(
+        CustomErrorHandler.alreadyExist('Email is already registred!')
+      );
+    }
 
-  if (userExists) {
-    res.status(400);
-    throw new Error('User already exists');
-  }
-
-  const user = await User.create({
-    name,
-    email,
-    password,
-    pic,
-  });
-
-  if (user) {
-    res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      pic: user.pic,
-      token: generateToken(user._id),
+    const user = await User.create({
+      name,
+      email,
+      password,
+      pic,
     });
-  } else {
-    res.status(400);
-    throw new Error('Failed to create new User');
-  }
-});
 
-const authUser = asyncHandler(async (req, res) => {
+    if (user) {
+      res.status(201).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        pic: user.pic,
+        token: generateToken(user._id),
+      });
+    }
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const authUser = async (req, res, next) => {
   const { email, password } = req.body;
 
-  const user = await User.findOne({ email });
-
-  if (user && (await user.matchPassword(password))) {
-    res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      pic: user.pic,
-      token: generateToken(user._id),
-    });
+  try {
+    const user = await User.findOne({ email });
+    if (user) {
+      if (await user.matchPassword(password)) {
+        res.json({
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          pic: user.pic,
+          token: generateToken(user._id),
+        });
+      } else {
+        return next(CustomErrorHandler.wrongCredentials());
+      }
+    } else {
+      return next(CustomErrorHandler.notFound('User does not exists.'));
+    }
+  } catch (error) {
+    return next(error);
   }
-});
+};
 
 module.exports = { registerUser, authUser };
